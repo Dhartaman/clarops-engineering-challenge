@@ -43,15 +43,15 @@ CREATE
       event_id VARCHAR(100) PRIMARY KEY,
       trace_id VARCHAR(100) NOT NULL,
       event_name VARCHAR(150) NOT NULL,
-      result VARCHAR(20) NOT NULL,
+      event_result VARCHAR(20) NOT NULL,
       occurred_at TIMESTAMPTZ NOT NULL,
       received_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       next_expected_event VARCHAR(150),
       next_event_ttl_seconds INTEGER,
       final_event BOOLEAN NOT NULL DEFAULT FALSE,
       metadata JSONB,
-      CONSTRAINT chk_trace_events_result CHECK(
-        result IN(
+      CONSTRAINT chk_trace_events_event_result CHECK(
+        event_result IN(
           'SUCCESS',
           'ERROR'
         )
@@ -124,12 +124,18 @@ CREATE
       CONSTRAINT chk_trace_states_events_received_positive CHECK(
         events_received > 0
       ),
-      CONSTRAINT chk_trace_states_waiting_expected CHECK(
+      CONSTRAINT chk_trace_states_waiting_fields CHECK(
         status <> 'WAITING_OTHER_EVENT'
         OR(
           next_expected_event IS NOT NULL
+          AND waiting_since IS NOT NULL
           AND next_expected_before IS NOT NULL
         )
+      ),
+      CONSTRAINT chk_trace_states_waiting_deadline_order CHECK(
+        next_expected_before IS NULL
+        OR waiting_since IS NULL
+        OR next_expected_before > waiting_since
       )
     );
 

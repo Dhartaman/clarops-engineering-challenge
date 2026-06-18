@@ -33,7 +33,7 @@ public class TraceEventEntity {
   private String eventName;
 
   @Enumerated(EnumType.STRING)
-  @Column(name = "result", nullable = false, length = 20)
+  @Column(name = "event_result", nullable = false, length = 20)
   private EventResult result;
 
   @Column(name = "occurred_at", nullable = false)

@@ -114,6 +114,65 @@ Assumptions and decisions:
 - Enums are stored as strings with `@Enumerated(EnumType.STRING)`.
 - Optimistic locking uses `@Version` on `TraceStateEntity.version`.
 
+### Prompt 1B SQL Patch — Trace State Waiting Constraints
+
+Summary:
+
+- Codex was asked to refine only the `trace_states` waiting-field SQL constraints.
+- Codex kept the existing schema, health table, trace tables, Java code, Docker setup, and business
+  behavior unchanged.
+- The waiting-state constraint now requires `next_expected_event`, `waiting_since`, and
+  `next_expected_before` when status is `WAITING_OTHER_EVENT`.
+- A structural deadline-order constraint was added so `next_expected_before` must be after
+  `waiting_since` when both are present.
+
+Files created:
+
+- None.
+
+Files updated:
+
+- `docker/init-scripts/db/01-init-schema.sql`.
+- `AI_USAGE.md`.
+
+Files deleted:
+
+- None.
+
+Assumptions and decisions:
+
+- Business flow rules remain in domain/application code, not SQL constraints.
+- The SQL patch is a structural integrity guard only and does not implement Phase 2 behavior.
+
+### Prompt 1B SQL Correction — Trace Event Result Column
+
+Summary:
+
+- Codex was asked to rename the `trace_events` SQL column from quoted `"result"` to
+  `event_result`.
+- Codex updated the trace event result check constraint name and expression.
+- Codex updated `TraceEventEntity` to map the `result` Java field to the `event_result` column.
+- No business logic or Phase 2 work was changed.
+
+Files created:
+
+- None.
+
+Files updated:
+
+- `docker/init-scripts/db/01-init-schema.sql`.
+- `src/main/java/com/clara/challenge/eventwatchdog/persistence/TraceEventEntity.java`.
+- `AI_USAGE.md`.
+
+Files deleted:
+
+- None.
+
+Assumptions and decisions:
+
+- The API/domain concept can remain named `result`; only the database column was renamed to avoid a
+  quoted SQL identifier.
+
 ## Accepted Suggestions
 
 - Keep the existing Java 21 / Spring Boot / PostgreSQL stack.
@@ -192,6 +251,15 @@ Assumptions and decisions:
   passed.
 - `./mvnw test`: passed. The test run compiled the Hibernate JSONB mapping successfully and logged
   the known sandbox-blocked PostgreSQL metadata warning before Maven exited successfully.
+
+### Prompt 1B SQL Patch
+
+- `./mvnw spotless:apply`: initially blocked by sandbox access to `~/.m2`; rerun with escalation
+  passed and formatted `docker/init-scripts/db/01-init-schema.sql` and `AI_USAGE.md`.
+- `./mvnw spotless:check`: initially blocked by sandbox access to `~/.m2`; rerun with escalation
+  passed.
+- `./mvnw test`: passed. The test run logged the known sandbox-blocked PostgreSQL metadata warning
+  before Maven exited successfully.
 
 ## Notes For Interview Discussion
 

@@ -248,6 +248,18 @@ Fallback:
 
 - If OpenAPI is skipped, use `README.md` examples and Hurl tests as the MVP API documentation.
 
+Status:
+
+- Completed with `org.springdoc:springdoc-openapi-starter-webmvc-ui`.
+- Verified OpenAPI JSON at `/api/v3/api-docs`.
+- Verified Swagger UI at `/api/swagger-ui/index.html` via `/api/swagger-ui.html` redirect.
+- Kept `/health` available at runtime but hidden from the event watchdog OpenAPI spec.
+- Kept springdoc path configuration out of `application.yml` because springdoc defaults already
+  expose the desired URLs under the existing `/api` context path.
+- Intentionally did not enable `spring.mvc.problemdetails.enabled` before Phase 4 Hurl validation
+  to avoid changing built-in Spring error response behavior while explicit API error handling is in
+  place.
+
 ## Phase 4 — Hurl E2E Tests
 
 Goal:

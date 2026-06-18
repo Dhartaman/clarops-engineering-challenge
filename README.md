@@ -18,6 +18,24 @@ For setup and run instructions see **[SETUP.md](SETUP.md)**.
 
 ---
 
+## API Documentation
+
+The application uses `/api` as its context path. With the selected springdoc starter and its
+default paths, the OpenAPI documentation is available at:
+
+- OpenAPI JSON spec: `GET /api/v3/api-docs`
+- Swagger UI entrypoint: `GET /api/swagger-ui.html`
+- Swagger UI resolved path: `GET /api/swagger-ui/index.html`
+
+No custom springdoc paths are configured because the defaults already produce the desired public
+URLs under `/api`.
+
+`spring.mvc.problemdetails.enabled` is intentionally not enabled before Hurl E2E validation so the
+existing explicit API error handling remains the only documented error-response behavior for this
+phase.
+
+---
+
 ## Expected Duration
 
 This challenge is designed to be completed in **3 to 4 hours**.

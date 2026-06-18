@@ -2,6 +2,7 @@ package com.clara.challenge.eventwatchdog.api.dto;
 
 import com.clara.challenge.eventwatchdog.domain.EventResult;
 import com.clara.challenge.eventwatchdog.domain.IncomingEvent;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -10,15 +11,17 @@ import java.time.Instant;
 import java.util.Map;
 
 public record EventRequest(
-    @NotBlank String eventId,
-    @NotBlank String traceId,
-    @NotBlank String eventName,
-    @NotNull EventResult result,
-    @NotNull Instant occurredAt,
-    String nextExpectedEvent,
-    @Positive Integer nextEventTtlSeconds,
-    boolean finalEvent,
-    Map<String, Object> metadata) {
+    @Schema(description = "Unique event identifier used for idempotent replay handling.") @NotBlank
+        String eventId,
+    @Schema(description = "Distributed flow trace identifier.") @NotBlank String traceId,
+    @Schema(description = "Name of the event received for the trace.") @NotBlank String eventName,
+    @Schema(description = "Result reported by the event.") @NotNull EventResult result,
+    @Schema(description = "Timestamp when the event occurred.") @NotNull Instant occurredAt,
+    @Schema(description = "Next event expected for the trace, if another event must arrive.")
+        String nextExpectedEvent,
+    @Schema(description = "TTL in seconds for the next expected event.") @Positive Integer nextEventTtlSeconds,
+    @Schema(description = "Whether this event completes the trace.") boolean finalEvent,
+    @Schema(description = "Optional event metadata stored as JSON.") Map<String, Object> metadata) {
 
   @AssertTrue(message = "nextExpectedEvent and nextEventTtlSeconds must be provided together")
   public boolean isNextExpectationValid() {

@@ -292,6 +292,81 @@ Assumptions and decisions:
 - The tests only mock repository interfaces, so Mockito's subclass mock maker is sufficient.
 - The test coverage and fixed-clock behavior from Phase 3 are preserved.
 
+### Prompt 3B — Optional OpenAPI Documentation
+
+Summary:
+
+- Codex was asked to add lightweight OpenAPI documentation for the existing event watchdog REST
+  API without changing runtime behavior.
+- Codex first verified that `org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3` resolves and
+  is aligned with Spring Boot 4 before adding it.
+- Codex added minimal API metadata, documented the existing event watchdog controller responses,
+  and added concise schema descriptions to request/response DTO fields.
+- Codex hid the legacy `/health` controller from OpenAPI so the generated spec stays focused on
+  the Phase 3 event watchdog API while leaving the runtime endpoint unchanged.
+
+Files created:
+
+- `src/main/java/com/clara/challenge/eventwatchdog/api/OpenApiConfiguration.java`.
+
+Files updated:
+
+- `pom.xml`.
+- `src/main/java/com/clara/challenge/HealthController.java`.
+- `src/main/java/com/clara/challenge/eventwatchdog/api/EventWatchdogController.java`.
+- `src/main/java/com/clara/challenge/eventwatchdog/api/dto/EventRequest.java`.
+- `src/main/java/com/clara/challenge/eventwatchdog/api/dto/TraceStatusResponse.java`.
+- `TASKS.md`.
+- `AI_USAGE.md`.
+
+Files deleted:
+
+- None.
+
+Assumptions and decisions:
+
+- Springdoc v3.0.3 is the selected Spring Boot 4-compatible OpenAPI dependency for this phase.
+- The public application URLs include the configured `/api` context path, while generated OpenAPI
+  path keys are documented as application-relative paths.
+- The actual springdoc UI is Swagger UI, not Scalar, so the verified UI path is
+  `/api/swagger-ui/index.html`.
+- OpenAPI annotations are documentation only and do not alter endpoint paths, JSON contracts,
+  status transitions, error behavior, SQL, Docker, Hurl files, or tests.
+
+### Prompt 3B Documentation Patch — OpenAPI URLs And Configuration Restraint
+
+Summary:
+
+- Codex was asked to make a documentation-only Phase 3B patch after OpenAPI verification.
+- Codex documented the verified OpenAPI JSON and Swagger UI URLs under the existing `/api` context
+  path.
+- Codex recorded that no custom springdoc paths are configured because the defaults already expose
+  `/api/v3/api-docs`, `/api/swagger-ui.html`, and `/api/swagger-ui/index.html`.
+- Codex recorded that `spring.mvc.problemdetails.enabled` was intentionally not added before
+  Phase 4 Hurl E2E validation to avoid changing Spring built-in error response behavior.
+
+Files created:
+
+- None.
+
+Files updated:
+
+- `README.md`.
+- `TASKS.md`.
+- `AI_USAGE.md`.
+
+Files deleted:
+
+- None.
+
+Assumptions and decisions:
+
+- This patch is documentation only.
+- Existing OpenAPI Java annotations, dependency declarations, endpoint behavior, SQL, Docker,
+  Hurl, and tests are left unchanged.
+- The project source currently declares the springdoc starter through `pom.xml`; this patch does
+  not modify the dependency version.
+
 ## Accepted Suggestions
 
 - Keep the existing Java 21 / Spring Boot / PostgreSQL stack.
@@ -311,6 +386,15 @@ Assumptions and decisions:
 - Use a fixed `Clock` in application tests to keep TTL materialization deterministic.
 - Force Mockito's subclass mock maker for application tests that only need repository interface
   mocks.
+- Add `org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3` after verifying dependency
+  resolution for Spring Boot 4-era artifacts.
+- Use a small `@OpenAPIDefinition` configuration class for API title, description, and version.
+- Use controller and DTO annotations for concise OpenAPI descriptions instead of changing runtime
+  code.
+- Hide the unrelated `/health` endpoint from the event watchdog OpenAPI spec without removing the
+  endpoint.
+- Rely on springdoc default API docs and Swagger UI paths under the existing `/api` context path
+  instead of adding redundant `springdoc.*` path properties.
 
 ## Rejected Suggestions
 
@@ -326,6 +410,17 @@ Assumptions and decisions:
   easier to unit test and map in a later API layer.
 - Adding controller or Hurl end-to-end tests in Phase 3, because the requested required coverage is
   focused on application orchestration and Hurl belongs to Phase 4.
+- Using springdoc 2.x, because Phase 3B requested a Spring Boot 4-compatible v3.x dependency.
+- Trying multiple unrelated OpenAPI libraries, because OpenAPI is optional and must not block the
+  MVP.
+- Adding Scalar UI, because the selected springdoc starter provides Swagger UI at
+  `/api/swagger-ui/index.html`.
+- Changing endpoint paths, request/response contracts, error handling, SQL, Docker files, Hurl
+  files, or tests for documentation.
+- Adding redundant custom springdoc path properties to `application.yml`, because the defaults
+  already produce the verified URLs under `/api`.
+- Enabling `spring.mvc.problemdetails.enabled` before Hurl validation, because it could change
+  built-in Spring error responses while the project already has explicit API error handling.
 
 ## Manual Decisions
 
@@ -339,7 +434,8 @@ Assumptions and decisions:
 - `result = ERROR` does not automatically complete the trace.
 - `nextExpectedEvent` and `nextEventTtlSeconds` must be provided together.
 - Unknown trace status lookup returns `404 Not Found`.
-- OpenAPI/Swagger may be added later only if compatible with Spring Boot 4.0.2.
+- OpenAPI/Swagger is included with springdoc v3.0.3 and remains optional documentation, not a
+  runtime behavior dependency for the MVP flow rules.
 
 ## Manual Corrections
 
@@ -349,6 +445,8 @@ Assumptions and decisions:
   application paths under the `/api` context path.
 - OpenAPI was explicitly kept optional and time-boxed so it cannot block the MVP.
 - Hurl tests were scoped to public API behavior only, with no internal database assertions.
+- Phase 3B documentation was clarified to point reviewers to Swagger UI, not Scalar, and to explain
+  why no custom springdoc path or Spring MVC ProblemDetails property was added.
 
 ## Validation Log
 
@@ -424,6 +522,36 @@ Assumptions and decisions:
 - Mockito 5.20 still printed its inline self-attach warning during `MockitoExtension`
   initialization despite the subclass mock-maker resource and explicit subclass repository mocks.
   No production code, dependency, or build configuration change was made to suppress that warning.
+
+### Prompt 3B
+
+- `./mvnw dependency:get -Dartifact=org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3 -Dtransitive=false`:
+  initially blocked by sandbox access to `~/.m2`; rerun with escalation passed and resolved the
+  artifact from Maven Central.
+- `./mvnw spotless:apply`: passed and formatted the OpenAPI-annotated Java files.
+- `./mvnw spotless:check`: passed.
+- `./mvnw test`: passed with 20 tests. The existing Spring context test logged the known
+  sandbox-blocked PostgreSQL metadata warning before Maven exited successfully. Springdoc
+  initialized `/v3/api-docs` and `/swagger-ui.html` in the test context.
+- First `./mvnw spring-boot:run`: failed before app startup because sandboxed Maven could not
+  access the local Docker socket.
+- Escalated `./mvnw spring-boot:run`: passed. The app started on port 8080 with context path
+  `/api`.
+- `curl http://localhost:8080/api/v3/api-docs`: passed with `200 application/json`.
+- `curl http://localhost:8080/api/swagger-ui.html`: passed with `302` redirect to
+  `http://localhost:8080/api/swagger-ui/index.html`.
+- `curl http://localhost:8080/api/swagger-ui/index.html`: passed with `200 text/html`.
+- `curl http://localhost:8080/api/scalar`: returned `500 application/problem+json` because Scalar
+  is not provided by the selected springdoc starter; Swagger UI is the actual verified UI path.
+- After hiding `/health` from OpenAPI, `./mvnw spotless:apply`, `./mvnw spotless:check`, and
+  `./mvnw test` all passed again.
+- Final escalated `./mvnw spring-boot:run`: passed. The generated OpenAPI document contained title
+  `ClarOps Distributed Event Watchdog API` and paths `/events` and
+  `/traces/{traceId}/status`.
+- Final `curl http://localhost:8080/api/v3/api-docs`: passed with `200 application/json`.
+- Final `curl http://localhost:8080/api/swagger-ui.html`: passed with `302` redirect to
+  `http://localhost:8080/api/swagger-ui/index.html`.
+- Final `curl http://localhost:8080/api/swagger-ui/index.html`: passed with `200 text/html`.
 
 ## Notes For Interview Discussion
 

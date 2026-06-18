@@ -77,6 +77,43 @@ Files deleted:
 
 - None.
 
+### Prompt 1B — Persistence Model
+
+Summary:
+
+- Codex was asked to add the persistence model only.
+- Scope included DDL, minimal domain enums, JPA entities, Spring Data repositories, and this
+  `AI_USAGE.md` update.
+- Codex was instructed not to add REST controllers, DTOs, business transition services, validation
+  or error handling, Hurl tests, README updates, dependencies, Docker changes, or infrastructure.
+
+Files created:
+
+- `src/main/java/com/clara/challenge/eventwatchdog/domain/EventResult.java`.
+- `src/main/java/com/clara/challenge/eventwatchdog/domain/TraceStatus.java`.
+- `src/main/java/com/clara/challenge/eventwatchdog/persistence/TraceEventEntity.java`.
+- `src/main/java/com/clara/challenge/eventwatchdog/persistence/TraceStateEntity.java`.
+- `src/main/java/com/clara/challenge/eventwatchdog/persistence/TraceEventRepository.java`.
+- `src/main/java/com/clara/challenge/eventwatchdog/persistence/TraceStateRepository.java`.
+
+Files updated:
+
+- `docker/init-scripts/db/01-init-schema.sql`.
+- `AI_USAGE.md`.
+
+Files deleted:
+
+- None.
+
+Assumptions and decisions:
+
+- JSONB metadata uses Hibernate built-in JSON mapping with `@JdbcTypeCode(SqlTypes.JSON)` and
+  `Map<String, Object>` so no dependency is needed.
+- Trace state stores the foreign-key value `lastEventId` directly instead of a JPA association to
+  keep the persistence model simple for the MVP.
+- Enums are stored as strings with `@Enumerated(EnumType.STRING)`.
+- Optimistic locking uses `@Version` on `TraceStateEntity.version`.
+
 ## Accepted Suggestions
 
 - Keep the existing Java 21 / Spring Boot / PostgreSQL stack.
@@ -146,6 +183,15 @@ Files deleted:
 - `./mvnw spotless:check`: initially blocked by sandbox access to `~/.m2`; rerun with escalation
   passed.
 - `./mvnw test`: passed.
+
+### Prompt 1B
+
+- `./mvnw spotless:apply`: initially blocked by sandbox access to `~/.m2`; rerun with escalation
+  passed and formatted `docker/init-scripts/db/01-init-schema.sql` and `AI_USAGE.md`.
+- `./mvnw spotless:check`: initially blocked by sandbox access to `~/.m2`; rerun with escalation
+  passed.
+- `./mvnw test`: passed. The test run compiled the Hibernate JSONB mapping successfully and logged
+  the known sandbox-blocked PostgreSQL metadata warning before Maven exited successfully.
 
 ## Notes For Interview Discussion
 

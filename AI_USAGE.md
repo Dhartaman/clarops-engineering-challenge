@@ -173,6 +173,46 @@ Assumptions and decisions:
 - The API/domain concept can remain named `result`; only the database column was renamed to avoid a
   quoted SQL identifier.
 
+### Prompt 2 — Domain State Transition Logic And Unit Tests
+
+Summary:
+
+- Codex was asked to implement pure domain state transition logic under `eventwatchdog.domain`.
+- Codex added immutable domain records for incoming events and trace state snapshots.
+- Codex added explicit conflict results for expected domain conflicts instead of throwing
+  exceptions.
+- Codex added plain JUnit tests for first-event, waiting, final, error-result, conflict, terminal,
+  and lazy TTL expiration behavior.
+- Codex did not add REST controllers, DTOs, application services, persistence adapters, DDL,
+  dependencies, Hurl tests, Docker changes, OpenAPI, or external infrastructure.
+
+Files created:
+
+- `src/main/java/com/clara/challenge/eventwatchdog/domain/IncomingEvent.java`.
+- `src/main/java/com/clara/challenge/eventwatchdog/domain/TraceStateSnapshot.java`.
+- `src/main/java/com/clara/challenge/eventwatchdog/domain/TraceConflictReason.java`.
+- `src/main/java/com/clara/challenge/eventwatchdog/domain/TraceTransitionResult.java`.
+- `src/main/java/com/clara/challenge/eventwatchdog/domain/TraceStateTransitionService.java`.
+- `src/test/java/com/clara/challenge/eventwatchdog/domain/TraceStateTransitionServiceTest.java`.
+
+Files updated:
+
+- `AI_USAGE.md`.
+
+Files deleted:
+
+- None.
+
+Assumptions and decisions:
+
+- Duplicate detection is deferred to application/persistence orchestration because pure domain
+  logic does not know which event IDs already exist.
+- Expected domain conflicts are represented as `TraceTransitionResult.Conflict` rather than
+  exceptions.
+- Lazy expiration is pure and idempotent: it returns an expired snapshot only when a waiting trace
+  is evaluated after its deadline.
+- Waiting fields are preserved on expired snapshots for diagnostic context.
+
 ## Accepted Suggestions
 
 - Keep the existing Java 21 / Spring Boot / PostgreSQL stack.
@@ -186,6 +226,8 @@ Assumptions and decisions:
 - Use records for DTOs and small immutable domain objects.
 - Use Lombok where it reduces boilerplate.
 - Use meaningful, low-noise logs.
+- Keep Phase 2 domain logic free of Spring dependencies.
+- Use explicit domain transition results for accepted and conflict outcomes.
 
 ## Rejected Suggestions
 
@@ -197,6 +239,8 @@ Assumptions and decisions:
 - Kafka/SQS/Pub/Sub/RabbitMQ or external event infrastructure, because the challenge does not
   require it.
 - Using MapStruct initially, because manual mapping is simpler for the small number of DTOs.
+- Throwing exceptions for expected Phase 2 domain conflicts, because explicit result objects are
+  easier to unit test and map in a later API layer.
 
 ## Manual Decisions
 
@@ -260,6 +304,17 @@ Assumptions and decisions:
   passed.
 - `./mvnw test`: passed. The test run logged the known sandbox-blocked PostgreSQL metadata warning
   before Maven exited successfully.
+
+### Prompt 2
+
+- `./mvnw test`: passed in the first compile/test check with 13 tests. The new plain domain tests
+  ran without Spring context, and the existing Spring context test logged the known sandbox-blocked
+  PostgreSQL metadata warning before Maven exited successfully.
+- `./mvnw spotless:apply`: passed after rerun with escalation for Maven `~/.m2` access and
+  formatted `AI_USAGE.md`.
+- `./mvnw spotless:check`: passed after rerun with escalation for Maven `~/.m2` access.
+- `./mvnw test`: passed with 13 tests. The existing Spring context test logged the known
+  sandbox-blocked PostgreSQL metadata warning before Maven exited successfully.
 
 ## Notes For Interview Discussion
 

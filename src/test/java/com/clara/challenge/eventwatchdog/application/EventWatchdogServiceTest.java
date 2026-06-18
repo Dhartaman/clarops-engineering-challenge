@@ -4,6 +4,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 import com.clara.challenge.eventwatchdog.domain.EventResult;
 import com.clara.challenge.eventwatchdog.domain.IncomingEvent;
@@ -17,33 +22,50 @@ import com.clara.challenge.eventwatchdog.persistence.TraceEventEntity;
 import com.clara.challenge.eventwatchdog.persistence.TraceEventRepository;
 import com.clara.challenge.eventwatchdog.persistence.TraceStateEntity;
 import com.clara.challenge.eventwatchdog.persistence.TraceStateRepository;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Proxy;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Function;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.MockMakers;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+@ExtendWith(MockitoExtension.class)
 class EventWatchdogServiceTest {
 
   private static final Instant BASE_TIME = Instant.parse("2026-06-15T10:00:00Z");
   private static final Instant NOW = Instant.parse("2026-06-15T10:03:00Z");
   private static final Clock FIXED_CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
 
+  @Mock(mockMaker = MockMakers.SUBCLASS)
+  private TraceEventRepository eventRepository;
+
+  @Mock(mockMaker = MockMakers.SUBCLASS)
+  private TraceStateRepository stateRepository;
+
+  private EventWatchdogService service;
+
+  @BeforeEach
+  void setUp() {
+    service =
+        new EventWatchdogService(
+            eventRepository, stateRepository, new TraceStateTransitionService(), FIXED_CLOCK);
+  }
+
   @Test
   void shouldCreateTrace_WhenFirstEventAccepted() {
     // Arrange
-    RepositoryStore<TraceEventEntity, String> eventStore =
-        new RepositoryStore<>(TraceEventEntity::getEventId);
-    RepositoryStore<TraceStateEntity, String> stateStore =
-        new RepositoryStore<>(TraceStateEntity::getTraceId);
-    EventWatchdogService service = service(eventStore, stateStore);
+    when(eventRepository.findById("evt-001")).thenReturn(Optional.empty());
+    when(stateRepository.findById("trace-123")).thenReturn(Optional.empty());
+    when(eventRepository.save(any(TraceEventEntity.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    when(stateRepository.save(any(TraceStateEntity.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
     IncomingEvent event = event("evt-001", "APPLICATION_RECEIVED");
 
     // Act
@@ -54,15 +76,17 @@ class EventWatchdogServiceTest {
     assertEquals(TraceStatus.STARTED, outcome.state().status());
     assertEquals(1, outcome.state().eventsReceived());
 
-    assertEquals(1, eventStore.saved().size());
-    TraceEventEntity savedEvent = eventStore.saved().getFirst();
+    ArgumentCaptor<TraceEventEntity> eventCaptor = ArgumentCaptor.forClass(TraceEventEntity.class);
+    verify(eventRepository).save(eventCaptor.capture());
+    TraceEventEntity savedEvent = eventCaptor.getValue();
     assertEquals("evt-001", savedEvent.getEventId());
     assertEquals("trace-123", savedEvent.getTraceId());
     assertEquals(EventResult.SUCCESS, savedEvent.getResult());
     assertEquals(NOW, savedEvent.getReceivedAt());
 
-    assertEquals(1, stateStore.saved().size());
-    TraceStateEntity savedState = stateStore.saved().getFirst();
+    ArgumentCaptor<TraceStateEntity> stateCaptor = ArgumentCaptor.forClass(TraceStateEntity.class);
+    verify(stateRepository).save(stateCaptor.capture());
+    TraceStateEntity savedState = stateCaptor.getValue();
     assertEquals("trace-123", savedState.getTraceId());
     assertEquals(TraceStatus.STARTED, savedState.getStatus());
     assertEquals("evt-001", savedState.getLastEventId());
@@ -73,13 +97,9 @@ class EventWatchdogServiceTest {
   @Test
   void shouldReturnDuplicateOutcome_WhenEventIdAlreadyExistsForSameTrace() {
     // Arrange
-    RepositoryStore<TraceEventEntity, String> eventStore =
-        new RepositoryStore<>(TraceEventEntity::getEventId);
-    RepositoryStore<TraceStateEntity, String> stateStore =
-        new RepositoryStore<>(TraceStateEntity::getTraceId);
-    eventStore.put(traceEvent("evt-001", "trace-123", "APPLICATION_RECEIVED"));
-    stateStore.put(startedState());
-    EventWatchdogService service = service(eventStore, stateStore);
+    when(eventRepository.findById("evt-001"))
+        .thenReturn(Optional.of(traceEvent("evt-001", "trace-123", "APPLICATION_RECEIVED")));
+    when(stateRepository.findById("trace-123")).thenReturn(Optional.of(startedState()));
     IncomingEvent event = event("evt-001", "APPLICATION_RECEIVED");
 
     // Act
@@ -89,57 +109,46 @@ class EventWatchdogServiceTest {
     assertTrue(outcome.duplicate());
     assertEquals(TraceStatus.STARTED, outcome.state().status());
     assertEquals(1, outcome.state().eventsReceived());
-    assertTrue(eventStore.saved().isEmpty());
-    assertTrue(stateStore.saved().isEmpty());
+    verify(eventRepository, never()).save(any());
+    verify(stateRepository, never()).save(any());
   }
 
   @Test
   void shouldRejectDuplicateEventId_WhenExistingEventBelongsToDifferentTrace() {
     // Arrange
-    RepositoryStore<TraceEventEntity, String> eventStore =
-        new RepositoryStore<>(TraceEventEntity::getEventId);
-    RepositoryStore<TraceStateEntity, String> stateStore =
-        new RepositoryStore<>(TraceStateEntity::getTraceId);
-    eventStore.put(traceEvent("evt-001", "other-trace", "APPLICATION_RECEIVED"));
-    EventWatchdogService service = service(eventStore, stateStore);
+    when(eventRepository.findById("evt-001"))
+        .thenReturn(Optional.of(traceEvent("evt-001", "other-trace", "APPLICATION_RECEIVED")));
     IncomingEvent event = event("evt-001", "APPLICATION_RECEIVED");
 
     // Act / Assert
     BusinessConflictException exception =
         assertThrows(BusinessConflictException.class, () -> service.ingestEvent(event));
     assertEquals("DUPLICATE_EVENT_TRACE_MISMATCH", exception.code());
-    assertTrue(eventStore.saved().isEmpty());
-    assertTrue(stateStore.saved().isEmpty());
+    verify(eventRepository, never()).save(any());
+    verify(stateRepository, never()).save(any());
   }
 
   @Test
   void shouldRejectUnexpectedEvent_WhenDomainReturnsConflict() {
     // Arrange
-    RepositoryStore<TraceEventEntity, String> eventStore =
-        new RepositoryStore<>(TraceEventEntity::getEventId);
-    RepositoryStore<TraceStateEntity, String> stateStore =
-        new RepositoryStore<>(TraceStateEntity::getTraceId);
-    stateStore.put(waitingState());
-    EventWatchdogService service = service(eventStore, stateStore);
+    when(eventRepository.findById("evt-002")).thenReturn(Optional.empty());
+    when(stateRepository.findById("trace-123")).thenReturn(Optional.of(waitingState()));
     IncomingEvent event = event("evt-002", "CONTRACT_SIGNED", BASE_TIME.plusSeconds(30));
 
     // Act / Assert
     BusinessConflictException exception =
         assertThrows(BusinessConflictException.class, () -> service.ingestEvent(event));
     assertEquals(TraceConflictReason.UNEXPECTED_EVENT.name(), exception.code());
-    assertTrue(eventStore.saved().isEmpty());
-    assertTrue(stateStore.saved().isEmpty());
+    verify(eventRepository, never()).save(any());
+    verify(stateRepository, never()).save(any());
   }
 
   @Test
   void shouldMaterializeExpiration_WhenStatusLookupFindsExpiredWaitingTrace() {
     // Arrange
-    RepositoryStore<TraceEventEntity, String> eventStore =
-        new RepositoryStore<>(TraceEventEntity::getEventId);
-    RepositoryStore<TraceStateEntity, String> stateStore =
-        new RepositoryStore<>(TraceStateEntity::getTraceId);
-    stateStore.put(waitingState());
-    EventWatchdogService service = service(eventStore, stateStore);
+    when(stateRepository.findById("trace-123")).thenReturn(Optional.of(waitingState()));
+    when(stateRepository.save(any(TraceStateEntity.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
 
     // Act
     TraceStateSnapshot state = service.getTraceStatus("trace-123");
@@ -148,37 +157,26 @@ class EventWatchdogServiceTest {
     assertEquals(TraceStatus.TTL_EXPIRED_FOR_EVENT, state.status());
     assertEquals("RULES_EVALUATED", state.nextExpectedEvent());
 
-    assertEquals(1, stateStore.saved().size());
-    TraceStateEntity savedState = stateStore.saved().getFirst();
+    ArgumentCaptor<TraceStateEntity> stateCaptor = ArgumentCaptor.forClass(TraceStateEntity.class);
+    verify(stateRepository).save(stateCaptor.capture());
+    TraceStateEntity savedState = stateCaptor.getValue();
     assertEquals(TraceStatus.TTL_EXPIRED_FOR_EVENT, savedState.getStatus());
     assertEquals("RULES_EVALUATED", savedState.getNextExpectedEvent());
     assertEquals(BASE_TIME, savedState.getWaitingSince());
     assertEquals(BASE_TIME.plusSeconds(120), savedState.getNextExpectedBefore());
     assertEquals(NOW, savedState.getUpdatedAt());
+    verifyNoInteractions(eventRepository);
   }
 
   @Test
   void shouldThrowNotFound_WhenTraceStatusDoesNotExist() {
     // Arrange
-    RepositoryStore<TraceEventEntity, String> eventStore =
-        new RepositoryStore<>(TraceEventEntity::getEventId);
-    RepositoryStore<TraceStateEntity, String> stateStore =
-        new RepositoryStore<>(TraceStateEntity::getTraceId);
-    EventWatchdogService service = service(eventStore, stateStore);
+    when(stateRepository.findById("missing-trace")).thenReturn(Optional.empty());
 
     // Act / Assert
     assertThrows(TraceNotFoundException.class, () -> service.getTraceStatus("missing-trace"));
-    assertTrue(stateStore.saved().isEmpty());
-  }
-
-  private static EventWatchdogService service(
-      RepositoryStore<TraceEventEntity, String> eventStore,
-      RepositoryStore<TraceStateEntity, String> stateStore) {
-    return new EventWatchdogService(
-        eventStore.repository(TraceEventRepository.class),
-        stateStore.repository(TraceStateRepository.class),
-        new TraceStateTransitionService(),
-        FIXED_CLOCK);
+    verify(stateRepository, never()).save(any());
+    verifyNoInteractions(eventRepository);
   }
 
   private static IncomingEvent event(String eventId, String eventName) {
@@ -232,52 +230,5 @@ class EventWatchdogServiceTest {
     entity.setWaitingSince(BASE_TIME);
     entity.setNextExpectedBefore(BASE_TIME.plusSeconds(120));
     return entity;
-  }
-
-  private static final class RepositoryStore<T, ID> {
-
-    private final Function<T, ID> idExtractor;
-    private final Map<ID, T> rows = new LinkedHashMap<>();
-    private final List<T> saved = new ArrayList<>();
-
-    private RepositoryStore(Function<T, ID> idExtractor) {
-      this.idExtractor = idExtractor;
-    }
-
-    private void put(T entity) {
-      rows.put(idExtractor.apply(entity), entity);
-    }
-
-    private List<T> saved() {
-      return saved;
-    }
-
-    private <R> R repository(Class<R> repositoryType) {
-      InvocationHandler handler =
-          (proxy, method, args) -> {
-            if (method.getDeclaringClass() == Object.class) {
-              return method.invoke(this, args);
-            }
-            if ("findById".equals(method.getName())) {
-              return Optional.ofNullable(rows.get(args[0]));
-            }
-            if ("save".equals(method.getName())) {
-              T entity = castEntity(args[0]);
-              rows.put(idExtractor.apply(entity), entity);
-              saved.add(entity);
-              return entity;
-            }
-            throw new UnsupportedOperationException("Unsupported repository method: " + method);
-          };
-      Object proxy =
-          Proxy.newProxyInstance(
-              repositoryType.getClassLoader(), new Class<?>[] {repositoryType}, handler);
-      return repositoryType.cast(proxy);
-    }
-
-    @SuppressWarnings("unchecked")
-    private T castEntity(Object value) {
-      return (T) value;
-    }
   }
 }

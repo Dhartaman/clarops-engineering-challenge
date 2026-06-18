@@ -262,6 +262,36 @@ Assumptions and decisions:
 - Lazy TTL expiration is materialized by updating only the current trace state when status lookup
   observes an expired waiting trace.
 
+### Prompt 3 Test Refactor — Mockito Repository Mocks
+
+Summary:
+
+- Codex was asked to refactor `EventWatchdogServiceTest` from custom dynamic proxy repository
+  fakes to conventional Mockito mocks.
+- Codex added a Mockito test resource that forces the subclass/classic mock maker so repository
+  interface mocks do not require Mockito inline self-attach.
+- Codex also marked the repository `@Mock` fields with Mockito's subclass mock maker constant for
+  clarity.
+- Codex kept `TraceStateTransitionService` real and did not change production code.
+
+Files created:
+
+- `src/test/resources/mockito-extensions/org.mockito.plugins.MockMaker`.
+
+Files updated:
+
+- `src/test/java/com/clara/challenge/eventwatchdog/application/EventWatchdogServiceTest.java`.
+- `AI_USAGE.md`.
+
+Files deleted:
+
+- None.
+
+Assumptions and decisions:
+
+- The tests only mock repository interfaces, so Mockito's subclass mock maker is sufficient.
+- The test coverage and fixed-clock behavior from Phase 3 are preserved.
+
 ## Accepted Suggestions
 
 - Keep the existing Java 21 / Spring Boot / PostgreSQL stack.
@@ -279,6 +309,8 @@ Assumptions and decisions:
 - Use explicit domain transition results for accepted and conflict outcomes.
 - Use a Spring application service as the transaction and persistence orchestration boundary.
 - Use a fixed `Clock` in application tests to keep TTL materialization deterministic.
+- Force Mockito's subclass mock maker for application tests that only need repository interface
+  mocks.
 
 ## Rejected Suggestions
 
@@ -381,6 +413,17 @@ Assumptions and decisions:
 - `./mvnw spotless:check`: passed after rerun with escalation for Maven `~/.m2` access.
 - `./mvnw test`: passed with 20 tests. The existing Spring context test logged the known
   sandbox-blocked PostgreSQL metadata warning before Maven exited successfully.
+
+### Prompt 3 Test Refactor
+
+- `./mvnw spotless:apply`: passed and formatted `AI_USAGE.md`.
+- `./mvnw spotless:check`: passed.
+- `./mvnw test`: passed with 20 tests. The refactored Mockito application tests passed, and the
+  existing Spring context test logged the known sandbox-blocked PostgreSQL metadata warning before
+  Maven exited successfully.
+- Mockito 5.20 still printed its inline self-attach warning during `MockitoExtension`
+  initialization despite the subclass mock-maker resource and explicit subclass repository mocks.
+  No production code, dependency, or build configuration change was made to suppress that warning.
 
 ## Notes For Interview Discussion
 

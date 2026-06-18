@@ -213,6 +213,55 @@ Assumptions and decisions:
   is evaluated after its deadline.
 - Waiting fields are preserved on expired snapshots for diagnostic context.
 
+### Prompt 3 — REST API, Application Orchestration, And Error Handling
+
+Summary:
+
+- Codex was asked to implement Phase 3 without adding Hurl tests, OpenAPI, dependencies, DDL,
+  Docker changes, README changes, schedulers, brokers, auth, UI, DynamoDB, or external
+  infrastructure.
+- Codex added API request and response DTOs, a REST controller, application orchestration,
+  duplicate replay handling, lazy TTL materialization, consistent `ProblemDetail` error handling,
+  and low-noise business logs.
+- Codex kept state transition rules in `eventwatchdog.domain` and duplicate detection in
+  application/persistence orchestration.
+- Codex added focused application service tests with a fixed `Clock`.
+
+Files created:
+
+- `src/main/java/com/clara/challenge/eventwatchdog/api/EventWatchdogController.java`.
+- `src/main/java/com/clara/challenge/eventwatchdog/api/dto/EventRequest.java`.
+- `src/main/java/com/clara/challenge/eventwatchdog/api/dto/TraceStatusResponse.java`.
+- `src/main/java/com/clara/challenge/eventwatchdog/application/EventIngestionOutcome.java`.
+- `src/main/java/com/clara/challenge/eventwatchdog/application/EventWatchdogConfiguration.java`.
+- `src/main/java/com/clara/challenge/eventwatchdog/application/EventWatchdogService.java`.
+- `src/main/java/com/clara/challenge/eventwatchdog/error/ApiExceptionHandler.java`.
+- `src/main/java/com/clara/challenge/eventwatchdog/error/BusinessConflictException.java`.
+- `src/main/java/com/clara/challenge/eventwatchdog/error/TraceNotFoundException.java`.
+- `src/test/java/com/clara/challenge/eventwatchdog/application/EventWatchdogServiceTest.java`.
+
+Files updated:
+
+- `AI_USAGE.md`.
+
+Files deleted:
+
+- None.
+
+Assumptions and decisions:
+
+- Controller mappings use `/events` and `/traces/{traceId}/status`; the configured `/api` context
+  path exposes them publicly as `/api/events` and `/api/traces/{traceId}/status`.
+- Duplicate replay returns the persisted trace state without mutating event history or trace state.
+- Duplicate `eventId` with a different `traceId` is represented as a business conflict with code
+  `DUPLICATE_EVENT_TRACE_MISMATCH`.
+- New events save `trace_events` before `trace_states` so the existing `last_event_id` foreign key
+  is satisfied in the transaction.
+- Application tests use lightweight in-memory repository proxies instead of Mockito because Mockito
+  inline agent attachment is not reliable in this execution environment.
+- Lazy TTL expiration is materialized by updating only the current trace state when status lookup
+  observes an expired waiting trace.
+
 ## Accepted Suggestions
 
 - Keep the existing Java 21 / Spring Boot / PostgreSQL stack.
@@ -228,6 +277,8 @@ Assumptions and decisions:
 - Use meaningful, low-noise logs.
 - Keep Phase 2 domain logic free of Spring dependencies.
 - Use explicit domain transition results for accepted and conflict outcomes.
+- Use a Spring application service as the transaction and persistence orchestration boundary.
+- Use a fixed `Clock` in application tests to keep TTL materialization deterministic.
 
 ## Rejected Suggestions
 
@@ -241,6 +292,8 @@ Assumptions and decisions:
 - Using MapStruct initially, because manual mapping is simpler for the small number of DTOs.
 - Throwing exceptions for expected Phase 2 domain conflicts, because explicit result objects are
   easier to unit test and map in a later API layer.
+- Adding controller or Hurl end-to-end tests in Phase 3, because the requested required coverage is
+  focused on application orchestration and Hurl belongs to Phase 4.
 
 ## Manual Decisions
 
@@ -314,6 +367,19 @@ Assumptions and decisions:
   formatted `AI_USAGE.md`.
 - `./mvnw spotless:check`: passed after rerun with escalation for Maven `~/.m2` access.
 - `./mvnw test`: passed with 13 tests. The existing Spring context test logged the known
+  sandbox-blocked PostgreSQL metadata warning before Maven exited successfully.
+
+### Prompt 3
+
+- `./mvnw test`: initial compile/test run failed because Mockito inline mock-maker could not
+  self-attach in the execution environment.
+- Codex replaced Mockito-based application tests with lightweight in-memory repository proxies.
+- `./mvnw test`: passed after the test rewrite with 20 tests. The existing Spring context test
+  logged the known sandbox-blocked PostgreSQL metadata warning before Maven exited successfully.
+- `./mvnw spotless:apply`: passed after rerun with escalation for Maven `~/.m2` access and
+  formatted the new Java files plus `AI_USAGE.md`.
+- `./mvnw spotless:check`: passed after rerun with escalation for Maven `~/.m2` access.
+- `./mvnw test`: passed with 20 tests. The existing Spring context test logged the known
   sandbox-blocked PostgreSQL metadata warning before Maven exited successfully.
 
 ## Notes For Interview Discussion

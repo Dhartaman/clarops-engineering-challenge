@@ -367,6 +367,74 @@ Assumptions and decisions:
 - The project source currently declares the springdoc starter through `pom.xml`; this patch does
   not modify the dependency version.
 
+### Prompt 4A — Required Hurl E2E Tests
+
+Summary:
+
+- Codex was asked to add only the four required public API Hurl scenarios for `STARTED`,
+  `WAITING_OTHER_EVENT`, `COMPLETED`, and `TTL_EXPIRED_FOR_EVENT`.
+- Each Hurl file creates its own trace with unique identifiers and then verifies the corresponding
+  status lookup without relying on execution order or database queries.
+- Codex did not change production Java, dependencies, configuration, SQL, Docker, README, or add
+  optional edge-case and correlation-id coverage.
+
+Files created:
+
+- `hurl/started-flow.hurl`.
+- `hurl/waiting-other-event-flow.hurl`.
+- `hurl/completed-flow.hurl`.
+- `hurl/ttl-expired-flow.hurl`.
+
+Files updated:
+
+- `TASKS.md`.
+- `AI_USAGE.md`.
+
+Files deleted:
+
+- None.
+
+Assumptions and decisions:
+
+- Hurl targets `http://localhost:8080` and includes the configured `/api` context path in every
+  request.
+- The completed flow does not assert `completedAt` because it is not required for Phase 4A.
+- The expired flow does not assert the POST status body beyond `201`; expiration is asserted only
+  after the required lazy GET evaluation.
+- The original waiting fixture used a June 15, 2026 deadline that had already expired by the June
+  19, 2026 validation date. A follow-up correction replaces it with a deterministic far-future
+  deadline so the scenario tests `WAITING_OTHER_EVENT` rather than lazy expiration.
+
+### Prompt 4A Correction — Deterministic Waiting Fixture
+
+Summary:
+
+- Codex was asked to correct only the waiting-flow Hurl fixture after validation showed that its
+  fixed deadline had already expired.
+- The waiting event timestamp was moved to June 15, 2099 while retaining the 120-second TTL, and
+  the expected deadline was updated to June 15, 2099 at 10:02 UTC.
+- The failure was a test fixture issue, not a production bug; lazy TTL expiration behaved as
+  designed.
+
+Files created:
+
+- None.
+
+Files updated:
+
+- `hurl/waiting-other-event-flow.hurl`.
+- `AI_USAGE.md`.
+- `TASKS.md`, to record final Phase 4A validation status.
+
+Files deleted:
+
+- None.
+
+Assumptions and decisions:
+
+- A fixed far-future timestamp keeps the waiting scenario deterministic without sleeps, runtime
+  clock overrides, or production changes.
+
 ## Accepted Suggestions
 
 - Keep the existing Java 21 / Spring Boot / PostgreSQL stack.
@@ -552,6 +620,35 @@ Assumptions and decisions:
 - Final `curl http://localhost:8080/api/swagger-ui.html`: passed with `302` redirect to
   `http://localhost:8080/api/swagger-ui/index.html`.
 - Final `curl http://localhost:8080/api/swagger-ui/index.html`: passed with `200 text/html`.
+
+### Prompt 4A
+
+- `./mvnw spotless:apply`: passed and formatted `TASKS.md` and `AI_USAGE.md`.
+- `./mvnw spotless:check`: passed.
+- `./mvnw test`: passed with 20 tests. The existing Spring context test logged the known
+  sandbox-blocked PostgreSQL metadata warning before Maven exited successfully.
+- `hurl --version`: passed; Hurl 8.0.1 is installed.
+- First `./mvnw spring-boot:run`: failed because sandboxed Maven could not access the local Docker
+  socket.
+- Escalated `./mvnw spring-boot:run`: passed. PostgreSQL became healthy and the app started on port
+  8080 with context path `/api`.
+- First `hurl --test hurl/*.hurl`: could not connect to the host-side app from the sandbox.
+- Escalated `hurl --test hurl/*.hurl`: three of four files passed. `started-flow.hurl`,
+  `completed-flow.hurl`, and `ttl-expired-flow.hurl` passed with two requests each.
+- `waiting-other-event-flow.hurl` reached both endpoints but failed its GET assertion: the actual
+  status was `TTL_EXPIRED_FOR_EVENT`, while `WAITING_OTHER_EVENT` was requested. Its fixed deadline
+  is June 15, 2026 at 10:02 UTC, four days before the June 19, 2026 validation date.
+
+### Prompt 4A Correction
+
+- `./mvnw spotless:apply`: passed and formatted `AI_USAGE.md`.
+- `./mvnw spotless:check`: passed.
+- `./mvnw test`: passed with 20 tests. The existing Spring context test logged the known
+  sandbox-blocked PostgreSQL metadata warning before Maven exited successfully.
+- Escalated `./mvnw spring-boot:run`: passed. PostgreSQL became healthy with a fresh volume and the
+  app started on port 8080 with context path `/api`.
+- Escalated `hurl --test hurl/*.hurl`: passed all four files and all eight requests with no
+  failures. The corrected waiting flow remained `WAITING_OTHER_EVENT`.
 
 ## Notes For Interview Discussion
 

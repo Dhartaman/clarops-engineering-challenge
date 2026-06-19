@@ -299,6 +299,14 @@ Validation commands:
 hurl --test hurl/*.hurl
 ```
 
+Status:
+
+- Phase 4A implementation completed with the four required flow scenarios.
+- Runtime validation passes all four scenarios. The waiting fixture uses a deterministic
+  far-future deadline so lazy expiration does not change its expected `WAITING_OTHER_EVENT`
+  status.
+- Optional edge-case Hurl scenarios remain deferred to a later phase.
+
 ## Phase 5 — README Polish And Final Verification
 
 Goal:

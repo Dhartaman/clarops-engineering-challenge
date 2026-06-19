@@ -12,6 +12,11 @@ Challenge. The goal is to keep AI contributions explicit, reviewable, and easy t
 
 ### Prompt 0 — Baseline Repository Inspection
 
+Condensed prompt used:
+
+> Inspect the baseline repository, conventions, tests, configuration, SQL, Maven, and Spotless setup.
+> Report findings only; do not change files.
+
 Summary:
 
 - Codex inspected the repository structure, existing health feature, Spring configuration, current
@@ -32,6 +37,13 @@ Files deleted:
 - None.
 
 ### Prompt 0B — Architecture Decisions
+
+Condensed prompt used:
+
+> Define and document the MVP architecture before implementation.
+> Use a modular monolith with PostgreSQL, event history plus current state, lazy TTL, and strict conflicts.
+> Update architecture and agent guidance only; avoid business implementation.
+> Run Spotless and tests after the documentation changes.
 
 Summary:
 
@@ -57,6 +69,12 @@ Files deleted:
 
 ### Prompt 1A — Documentation Planning
 
+Condensed prompt used:
+
+> Create small, scoped implementation tasks and an AI usage log before writing business logic.
+> Update only `TASKS.md` and `AI_USAGE.md`; do not add code, DDL, dependencies, Docker, or README changes.
+> Apply formatting and run the existing tests.
+
 Summary:
 
 - Codex was asked to prepare implementation planning documentation before any business logic.
@@ -78,6 +96,13 @@ Files deleted:
 - None.
 
 ### Prompt 1B — Persistence Model
+
+Condensed prompt used:
+
+> Implement the persistence phase only: PostgreSQL DDL, minimal enums, JPA entities, and repositories.
+> Store immutable event history and current trace state, use `jsonb`, and add optimistic locking.
+> Do not add REST, transition orchestration, Hurl, dependencies, or infrastructure.
+> Run Spotless and tests.
 
 Summary:
 
@@ -116,6 +141,11 @@ Assumptions and decisions:
 
 ### Prompt 1B SQL Patch — Trace State Waiting Constraints
 
+Condensed prompt used:
+
+> Tighten only the `trace_states` waiting-field and deadline-order constraints.
+> Keep Java, Docker, schema shape, and business behavior unchanged; run formatting and tests.
+
 Summary:
 
 - Codex was asked to refine only the `trace_states` waiting-field SQL constraints.
@@ -146,6 +176,11 @@ Assumptions and decisions:
 
 ### Prompt 1B SQL Correction — Trace Event Result Column
 
+Condensed prompt used:
+
+> Rename the quoted trace-event result column to `event_result` and align its JPA mapping.
+> Change no business behavior; run formatting and tests.
+
 Summary:
 
 - Codex was asked to rename the `trace_events` SQL column from quoted `"result"` to
@@ -174,6 +209,13 @@ Assumptions and decisions:
   quoted SQL identifier.
 
 ### Prompt 2 — Domain State Transition Logic And Unit Tests
+
+Condensed prompt used:
+
+> Implement pure, deterministic trace state transitions and focused JUnit tests.
+> Cover first, waiting, final, and error events, conflicts, terminal states, and lazy TTL expiration.
+> Keep the domain independent of Spring and persistence; do not add REST or infrastructure.
+> Use readable test names and Arrange / Act / Assert, then run formatting and tests.
 
 Summary:
 
@@ -214,6 +256,13 @@ Assumptions and decisions:
 - Waiting fields are preserved on expired snapshots for diagnostic context.
 
 ### Prompt 3 — REST API, Application Orchestration, And Error Handling
+
+Condensed prompt used:
+
+> Implement the `/api` REST endpoints, validation, application orchestration, error mapping, and low-noise logs.
+> Preserve domain rules, make duplicate replay idempotent, and materialize TTL lazily on status lookup.
+> Add focused application tests with deterministic time.
+> Do not add Hurl, OpenAPI, DDL, dependencies, Docker, schedulers, or brokers; run Spotless and tests.
 
 Summary:
 
@@ -264,6 +313,12 @@ Assumptions and decisions:
 
 ### Prompt 3 Test Refactor — Mockito Repository Mocks
 
+Condensed prompt used:
+
+> Replace custom repository proxy fakes in `EventWatchdogServiceTest` with conventional Mockito mocks.
+> Keep the transition service real, preserve fixed-clock coverage, and do not change production code.
+> Run Spotless and all tests.
+
 Summary:
 
 - Codex was asked to refactor `EventWatchdogServiceTest` from custom dynamic proxy repository
@@ -293,6 +348,13 @@ Assumptions and decisions:
 - The test coverage and fixed-clock behavior from Phase 3 are preserved.
 
 ### Prompt 3B — Optional OpenAPI Documentation
+
+Condensed prompt used:
+
+> Add lightweight OpenAPI documentation only after verifying Spring Boot 4 compatibility.
+> Document the existing event watchdog endpoints and DTOs without changing runtime behavior.
+> Keep `/health` out of the generated business API spec and avoid redundant configuration.
+> Verify dependency resolution, formatting, tests, API docs JSON, and Swagger UI.
 
 Summary:
 
@@ -335,6 +397,11 @@ Assumptions and decisions:
 
 ### Prompt 3B Documentation Patch — OpenAPI URLs And Configuration Restraint
 
+Condensed prompt used:
+
+> Correct only documentation for the verified OpenAPI and Swagger URLs and default path choices.
+> Do not change dependencies, Java behavior, application configuration, Hurl, SQL, or Docker.
+
 Summary:
 
 - Codex was asked to make a documentation-only Phase 3B patch after OpenAPI verification.
@@ -368,6 +435,13 @@ Assumptions and decisions:
   not modify the dependency version.
 
 ### Prompt 4A — Required Hurl E2E Tests
+
+Condensed prompt used:
+
+> Add four self-contained Hurl flows for `STARTED`, `WAITING_OTHER_EVENT`, `COMPLETED`, and TTL expiry.
+> Validate only public `/api` responses with deterministic IDs and no database queries or sleeps.
+> Do not change production code, dependencies, configuration, SQL, Docker, or add edge cases.
+> Run Spotless, unit tests, the app, and the Hurl suite.
 
 Summary:
 
@@ -407,6 +481,11 @@ Assumptions and decisions:
 
 ### Prompt 4A Correction — Deterministic Waiting Fixture
 
+Condensed prompt used:
+
+> Move the waiting-flow fixture to a deterministic far-future timestamp and update its expected deadline.
+> Treat the failure as fixture expiry, not a production bug; rerun Maven and all Hurl tests.
+
 Summary:
 
 - Codex was asked to correct only the waiting-flow Hurl fixture after validation showed that its
@@ -436,6 +515,13 @@ Assumptions and decisions:
   clock overrides, or production changes.
 
 ### Prompt 4B — Optional Hurl Edge-Case E2E Tests
+
+Condensed prompt used:
+
+> Add six independent public-API Hurl edge cases: duplicate, unexpected, late, completed, expired, and unknown trace.
+> Use Phase 4B IDs and stable `ProblemDetail` fields; do not inspect the database or depend on file order.
+> Do not change production code, dependencies, configuration, Docker, SQL, or correlation behavior.
+> Run Maven validation and all Hurl files.
 
 Summary:
 
@@ -488,6 +574,13 @@ Assumptions and decisions:
 
 ### Prompt 4C — Rerunnable Hurl Fixtures And Script Wrapper
 
+Condensed prompt used:
+
+> Parameterize every Hurl event and trace ID with required `{{runId}}` values for rerunnable tests.
+> Add a strict Bash wrapper with a timestamp/random default and optional `RUN_ID` override.
+> Document direct and wrapper commands; do not start or reset Docker or clean the database.
+> Verify Maven plus repeated direct, generated-ID, and explicit-ID Hurl runs against one database.
+
 Summary:
 
 - Codex was asked to parameterize all ten Hurl files with a required `runId` variable so repeated
@@ -535,6 +628,13 @@ Assumptions and decisions:
   rapid consecutive local runs.
 
 ### Prompt 4D — Lightweight Observability Polish
+
+Condensed prompt used:
+
+> Add lightweight `X-Correlation-Id` propagation with MDC cleanup and a correlation-aware console pattern.
+> Reuse low-noise business logs, add only missing operational signals, and comment non-obvious decisions.
+> Add lightweight filter tests and one independent Hurl flow without changing JSON, status, or business behavior.
+> Do not add dependencies or external observability; run Maven and all Hurl flows.
 
 Summary:
 
@@ -591,6 +691,13 @@ Assumptions and decisions:
   infrastructure.
 
 ### Prompt 5 — README Polish And Final Verification
+
+Condensed prompt used:
+
+> Replace the assignment-style README with a concise reviewer-facing solution guide.
+> Cover architecture, data model, API examples, statuses, edge cases, setup, testing, trade-offs, and future work.
+> Change documentation only; preserve all implementation and API behavior.
+> Run the clean Spotless and verify build, start the app, and run the complete Hurl suite.
 
 Summary:
 

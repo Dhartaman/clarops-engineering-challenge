@@ -590,6 +590,53 @@ Assumptions and decisions:
 - Removing only the correlation MDC key avoids erasing unrelated MDC values established by other
   infrastructure.
 
+### Prompt 5 — README Polish And Final Verification
+
+Summary:
+
+- Codex was asked to make the completed solution reviewer-friendly and interview-ready without
+  changing implementation behavior.
+- Codex replaced the assignment-oriented README with a concise solution document covering the
+  problem, architecture, data model, API, statuses, edge cases, operations, testing, decisions,
+  trade-offs, and future evolution.
+- Codex cross-checked the documentation against setup instructions, architecture decisions, DDL,
+  Hurl scenarios, the runner script, and relevant API/domain/application/persistence code.
+
+Files created:
+
+- None.
+
+Files updated:
+
+- `README.md`.
+- `TASKS.md`.
+- `AI_USAGE.md`.
+
+Files deleted:
+
+- None.
+
+Accepted suggestions:
+
+- Lead with the implemented solution rather than repeat the challenge prompt.
+- Keep quick-start, API examples, test commands, and verified behavior directly accessible.
+- Link to focused supporting documents instead of duplicating every implementation detail.
+- Document both benefits and limitations of lazy TTL, dual-table storage, strict conflicts, plain
+  SQL initialization, and lightweight correlation IDs.
+
+Rejected suggestions:
+
+- New features, dependencies, or behavioral changes during documentation polish.
+- Changes to Java, tests, Hurl, SQL, Docker, Maven, application configuration, or API contracts.
+- Repeating the full original challenge brief in the final reviewer-facing README.
+
+Assumptions and decisions:
+
+- `SETUP.md`, `TASKS.md`, `AI_USAGE.md`, and `docs/ARCHITECTURE.md` remain the detailed supporting
+  records; README is the concise entry point.
+- Final verification results are recorded after running the exact requested build and runtime
+  commands.
+
 ## Accepted Suggestions
 
 - Keep the existing Java 21 / Spring Boot / PostgreSQL stack.
@@ -848,6 +895,21 @@ Assumptions and decisions:
   files and all 21 HTTP requests.
 - Runtime logs showed generated UUIDs for ordinary Hurl requests and preserved
   `phase4d-correlation-20260619131123-26432` for the explicit correlation flow.
+
+### Prompt 5
+
+- First `./mvnw clean spotless:apply verify`: blocked before the build by sandbox write access to
+  Maven's local `~/.m2` resolver metadata.
+- Escalated `./mvnw clean spotless:apply verify`: passed. Maven cleaned and packaged the JAR,
+  Spotless passed, and all 23 tests passed. The Spring context test logged its known unavailable
+  PostgreSQL metadata warning without affecting the successful build.
+- Escalated `./mvnw spring-boot:run`: passed. Compose initialized PostgreSQL and the application
+  started on port 8080 with context path `/api`.
+- `./scripts/run-hurl-tests.sh`: generated `RUN_ID=20260619143025-31418` and passed all 11 files and
+  all 21 HTTP requests with no failures.
+- Optional final OpenAPI curl rechecks were blocked before execution by the environment's
+  approval-usage limit. The same JSON, redirect, and Swagger UI endpoints were already verified
+  and recorded during Phase 3B; no retry or workaround was attempted.
 
 ## Notes For Interview Discussion
 

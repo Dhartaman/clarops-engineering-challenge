@@ -341,6 +341,13 @@ Validation commands:
 
 ```bash
 ./mvnw clean spotless:apply verify
-hurl --test hurl/*.hurl
+./scripts/run-hurl-tests.sh
 ```
+
+Status:
+
+- Completed with a solution-focused README covering architecture, data model, API examples,
+  behavior, operations, validation, trade-offs, and future improvements.
+- Final clean build passed with 23 tests; runtime verification passed all 11 Hurl files and all 21
+  HTTP requests.
 

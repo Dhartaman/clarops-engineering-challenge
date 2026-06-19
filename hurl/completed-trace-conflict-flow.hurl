@@ -1,8 +1,8 @@
 POST http://localhost:8080/api/events
 Content-Type: application/json
 {
-  "eventId": "phase4b-completed-event-001",
-  "traceId": "phase4b-completed-conflict-trace-001",
+  "eventId": "phase4b-completed-event-{{runId}}-001",
+  "traceId": "phase4b-completed-conflict-trace-{{runId}}",
   "eventName": "FLOW_COMPLETED",
   "result": "SUCCESS",
   "occurredAt": "2099-06-15T10:00:00Z",
@@ -17,8 +17,8 @@ jsonpath "$.eventsReceived" == 1
 POST http://localhost:8080/api/events
 Content-Type: application/json
 {
-  "eventId": "phase4b-completed-event-002",
-  "traceId": "phase4b-completed-conflict-trace-001",
+  "eventId": "phase4b-completed-event-{{runId}}-002",
+  "traceId": "phase4b-completed-conflict-trace-{{runId}}",
   "eventName": "AFTER_COMPLETION_EVENT",
   "result": "SUCCESS",
   "occurredAt": "2099-06-15T10:01:00Z",

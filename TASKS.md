@@ -296,7 +296,8 @@ Validation commands:
 ./mvnw spotless:check
 ./mvnw test
 ./mvnw spring-boot:run
-hurl --test hurl/*.hurl
+hurl --test --variable runId="$(date +%Y%m%d%H%M%S)-$RANDOM" hurl/*.hurl
+./scripts/run-hurl-tests.sh
 ```
 
 Status:
@@ -307,6 +308,10 @@ Status:
   status.
 - Phase 4B completed with six optional edge-case scenarios using only the public HTTP API.
 - Runtime validation passes all ten Phase 4 Hurl files and all 20 HTTP requests.
+- Phase 4C completed by parameterizing every event and trace identifier with a required `runId`
+  and adding a script wrapper.
+- Direct CLI, generated-ID script, and explicit-ID script runs each pass all ten Hurl files against
+  the same database without cleanup.
 
 ## Phase 5 — README Polish And Final Verification
 

@@ -1,8 +1,8 @@
 POST http://localhost:8080/api/events
 Content-Type: application/json
 {
-  "eventId": "phase4b-late-start-event-001",
-  "traceId": "phase4b-late-trace-001",
+  "eventId": "phase4b-late-start-event-{{runId}}-001",
+  "traceId": "phase4b-late-trace-{{runId}}",
   "eventName": "APPLICATION_RECEIVED",
   "result": "SUCCESS",
   "occurredAt": "2020-01-01T00:00:00Z",
@@ -16,8 +16,8 @@ HTTP 201
 POST http://localhost:8080/api/events
 Content-Type: application/json
 {
-  "eventId": "phase4b-late-event-002",
-  "traceId": "phase4b-late-trace-001",
+  "eventId": "phase4b-late-event-{{runId}}-002",
+  "traceId": "phase4b-late-trace-{{runId}}",
   "eventName": "RULES_EVALUATED",
   "result": "SUCCESS",
   "occurredAt": "2020-01-01T00:00:02Z",

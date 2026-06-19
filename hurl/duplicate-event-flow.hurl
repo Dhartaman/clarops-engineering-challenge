@@ -1,8 +1,8 @@
 POST http://localhost:8080/api/events
 Content-Type: application/json
 {
-  "eventId": "phase4b-duplicate-event-001",
-  "traceId": "phase4b-duplicate-trace-001",
+  "eventId": "phase4b-duplicate-event-{{runId}}-001",
+  "traceId": "phase4b-duplicate-trace-{{runId}}",
   "eventName": "APPLICATION_RECEIVED",
   "result": "SUCCESS",
   "occurredAt": "2099-06-15T10:00:00Z",
@@ -16,15 +16,15 @@ Content-Type: application/json
 
 HTTP 201
 [Asserts]
-jsonpath "$.traceId" == "phase4b-duplicate-trace-001"
+jsonpath "$.traceId" == "phase4b-duplicate-trace-{{runId}}"
 jsonpath "$.status" == "WAITING_OTHER_EVENT"
 jsonpath "$.eventsReceived" == 1
 
 POST http://localhost:8080/api/events
 Content-Type: application/json
 {
-  "eventId": "phase4b-duplicate-event-001",
-  "traceId": "phase4b-duplicate-trace-001",
+  "eventId": "phase4b-duplicate-event-{{runId}}-001",
+  "traceId": "phase4b-duplicate-trace-{{runId}}",
   "eventName": "APPLICATION_RECEIVED",
   "result": "SUCCESS",
   "occurredAt": "2099-06-15T10:00:00Z",
@@ -38,6 +38,6 @@ Content-Type: application/json
 
 HTTP 200
 [Asserts]
-jsonpath "$.traceId" == "phase4b-duplicate-trace-001"
+jsonpath "$.traceId" == "phase4b-duplicate-trace-{{runId}}"
 jsonpath "$.status" == "WAITING_OTHER_EVENT"
 jsonpath "$.eventsReceived" == 1

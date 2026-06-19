@@ -36,6 +36,34 @@ phase.
 
 ---
 
+## Running Hurl Tests
+
+Start the application before running the Hurl suite. Each run injects a unique `runId` into its
+event and trace identifiers, so normal repeated runs against the same database do not require
+manual cleanup.
+
+Run Hurl directly:
+
+```bash
+hurl --test --variable runId="$(date +%Y%m%d%H%M%S)-$RANDOM" hurl/*.hurl
+```
+
+Or use the script wrapper:
+
+```bash
+./scripts/run-hurl-tests.sh
+```
+
+Override the generated run ID when a specific value is useful:
+
+```bash
+RUN_ID=my-local-run ./scripts/run-hurl-tests.sh
+```
+
+The wrapper does not start the application, reset Docker, clean the database, or run SQL.
+
+---
+
 ## Expected Duration
 
 This challenge is designed to be completed in **3 to 4 hours**.
@@ -483,7 +511,7 @@ Please include instructions in the README explaining how to run the Hurl tests.
 Example:
 
 ```bash
-hurl --test hurl/*.hurl
+hurl --test --variable runId="$(date +%Y%m%d%H%M%S)-$RANDOM" hurl/*.hurl
 ```
 
 ---

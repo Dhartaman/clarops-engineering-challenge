@@ -486,6 +486,54 @@ Assumptions and decisions:
 - Far-future event timestamps keep non-expiration scenarios deterministic, while past timestamps
   exercise late and expired behavior without waiting.
 
+### Prompt 4C — Rerunnable Hurl Fixtures And Script Wrapper
+
+Summary:
+
+- Codex was asked to parameterize all ten Hurl files with a required `runId` variable so repeated
+  runs produce unique event and trace identifiers without database cleanup.
+- Codex added a Bash wrapper that generates a timestamp-plus-random run ID by default, accepts a
+  `RUN_ID` environment override, prints the selected value, and invokes the complete Hurl suite.
+- Codex documented both direct CLI and wrapper usage, including the requirement that the
+  application is already running.
+
+Files created:
+
+- `scripts/run-hurl-tests.sh`.
+
+Files updated:
+
+- All ten files under `hurl/`.
+- `README.md`.
+- `TASKS.md`.
+- `AI_USAGE.md`.
+
+Files deleted:
+
+- None.
+
+Accepted suggestions:
+
+- Inject one required run ID consistently into every event ID, trace ID, status URL, and matching
+  response assertion.
+- Preserve exact duplicate replay identifiers within a single Hurl scenario.
+- Offer both a direct Hurl command and a small strict-mode Bash wrapper.
+- Allow deterministic local reproduction through a `RUN_ID` environment override.
+
+Rejected suggestions:
+
+- Database cleanup, SQL, or Docker resets as part of normal Hurl execution.
+- Starting the application from the wrapper.
+- Sleeps or waits between requests.
+- Production Java, dependency, configuration, SQL, Docker, OpenAPI, or correlation-id changes.
+
+Assumptions and decisions:
+
+- A run ID must be unique for each suite execution; deliberately reusing an override can reproduce
+  the same database collisions the parameterization is designed to avoid.
+- The default combines second-resolution time with Bash's random suffix to remain practical for
+  rapid consecutive local runs.
+
 ## Accepted Suggestions
 
 - Keep the existing Java 21 / Spring Boot / PostgreSQL stack.
@@ -715,6 +763,21 @@ Assumptions and decisions:
   app started on port 8080 with context path `/api`.
 - Escalated `hurl --test hurl/*.hurl`: passed all ten files and all 20 HTTP requests with no
   failures.
+
+### Prompt 4C
+
+- `./mvnw spotless:apply`: passed and formatted `README.md`, `TASKS.md`, and `AI_USAGE.md`.
+- `./mvnw spotless:check`: passed.
+- `./mvnw test`: passed with 20 tests. The existing Spring context test logged the known
+  sandbox-blocked PostgreSQL metadata warning before Maven exited successfully.
+- Escalated `./mvnw spring-boot:run`: passed against the existing populated PostgreSQL volume; no
+  database or Docker cleanup was performed.
+- Direct `hurl --test --variable runId="$(date +%Y%m%d%H%M%S)-$RANDOM" hurl/*.hurl`: passed all
+  ten files and all 20 requests.
+- `./scripts/run-hurl-tests.sh`: generated and printed `RUN_ID=20260619124032-21626`, then passed
+  all ten files and all 20 requests against the same database without cleanup.
+- `RUN_ID=manual-phase4c-check ./scripts/run-hurl-tests.sh`: printed the override and passed all ten
+  files and all 20 requests against the same database without cleanup.
 
 ## Notes For Interview Discussion
 

@@ -1,8 +1,8 @@
 POST http://localhost:8080/api/events
 Content-Type: application/json
 {
-  "eventId": "phase4a-started-event-001",
-  "traceId": "phase4a-started-trace-001",
+  "eventId": "phase4a-started-event-{{runId}}-001",
+  "traceId": "phase4a-started-trace-{{runId}}",
   "eventName": "APPLICATION_RECEIVED",
   "result": "SUCCESS",
   "occurredAt": "2026-06-15T10:00:00Z",
@@ -15,12 +15,12 @@ Content-Type: application/json
 HTTP 201
 [Asserts]
 jsonpath "$.status" == "STARTED"
-jsonpath "$.traceId" == "phase4a-started-trace-001"
+jsonpath "$.traceId" == "phase4a-started-trace-{{runId}}"
 jsonpath "$.lastEventName" == "APPLICATION_RECEIVED"
 jsonpath "$.lastEventResult" == "SUCCESS"
 jsonpath "$.eventsReceived" == 1
 
-GET http://localhost:8080/api/traces/phase4a-started-trace-001/status
+GET http://localhost:8080/api/traces/phase4a-started-trace-{{runId}}/status
 
 HTTP 200
 [Asserts]

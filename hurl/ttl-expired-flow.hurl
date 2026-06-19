@@ -1,8 +1,8 @@
 POST http://localhost:8080/api/events
 Content-Type: application/json
 {
-  "eventId": "phase4a-expired-event-001",
-  "traceId": "phase4a-expired-trace-001",
+  "eventId": "phase4a-expired-event-{{runId}}-001",
+  "traceId": "phase4a-expired-trace-{{runId}}",
   "eventName": "APPLICATION_RECEIVED",
   "result": "SUCCESS",
   "occurredAt": "2020-01-01T00:00:00Z",
@@ -16,11 +16,11 @@ Content-Type: application/json
 
 HTTP 201
 
-GET http://localhost:8080/api/traces/phase4a-expired-trace-001/status
+GET http://localhost:8080/api/traces/phase4a-expired-trace-{{runId}}/status
 
 HTTP 200
 [Asserts]
 jsonpath "$.status" == "TTL_EXPIRED_FOR_EVENT"
-jsonpath "$.traceId" == "phase4a-expired-trace-001"
+jsonpath "$.traceId" == "phase4a-expired-trace-{{runId}}"
 jsonpath "$.nextExpectedEvent" == "RULES_EVALUATED"
 jsonpath "$.nextExpectedBefore" == "2020-01-01T00:00:01Z"

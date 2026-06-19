@@ -534,6 +534,62 @@ Assumptions and decisions:
 - The default combines second-resolution time with Bash's random suffix to remain practical for
   rapid consecutive local runs.
 
+### Prompt 4D — Lightweight Observability Polish
+
+Summary:
+
+- Codex was asked to add `X-Correlation-Id` propagation, MDC correlation, a minimal console log
+  pattern, focused operational logging, decision-level comments, lightweight tests, and one Hurl
+  flow.
+- A highest-precedence `OncePerRequestFilter` preserves non-blank incoming values or generates a
+  UUID, adds it to the response, scopes it in MDC, and removes it in a `finally` block.
+- Existing business logs already covered accepted events, duplicate replay, conflicts, lazy
+  expiration, and completion; Codex added only the missing unknown-trace warning.
+- Comments were limited to business-time TTL, lazy expiration materialization, idempotent replay,
+  terminal trace states, and paired expectation validation.
+
+Files created:
+
+- `src/main/java/com/clara/challenge/eventwatchdog/api/CorrelationIdFilter.java`.
+- `src/test/java/com/clara/challenge/eventwatchdog/api/CorrelationIdFilterTest.java`.
+- `hurl/correlation-id-flow.hurl`.
+
+Files updated:
+
+- `src/main/resources/application.yaml`.
+- `src/main/java/com/clara/challenge/eventwatchdog/application/EventWatchdogService.java`.
+- `src/main/java/com/clara/challenge/eventwatchdog/domain/TraceStateTransitionService.java`.
+- `src/main/java/com/clara/challenge/eventwatchdog/api/dto/EventRequest.java`.
+- `README.md`.
+- `TASKS.md`.
+- `AI_USAGE.md`.
+
+Files deleted:
+
+- None.
+
+Accepted suggestions:
+
+- Use a small servlet filter and SLF4J MDC without adding dependencies.
+- Preserve supplied correlation IDs exactly and generate UUIDs only for missing or blank values.
+- Put correlation data in headers and logs without changing API JSON bodies or status codes.
+- Test the filter directly with servlet mocks instead of starting a Spring context.
+- Add only the operational log signal missing from the existing service.
+
+Rejected suggestions:
+
+- Logback XML, structured logging libraries, or new dependencies.
+- Full request bodies, metadata, sensitive data, or repository-level logging.
+- Async processing, schedulers, or external observability infrastructure.
+- Business-rule, SQL, Docker, springdoc path, ProblemDetails, or API JSON changes.
+- Broad comment coverage that merely restates obvious code.
+
+Assumptions and decisions:
+
+- Correlation applies to every HTTP request handled by the application, including error responses.
+- Removing only the correlation MDC key avoids erasing unrelated MDC values established by other
+  infrastructure.
+
 ## Accepted Suggestions
 
 - Keep the existing Java 21 / Spring Boot / PostgreSQL stack.
@@ -778,6 +834,20 @@ Assumptions and decisions:
   all ten files and all 20 requests against the same database without cleanup.
 - `RUN_ID=manual-phase4c-check ./scripts/run-hurl-tests.sh`: printed the override and passed all ten
   files and all 20 requests against the same database without cleanup.
+
+### Prompt 4D
+
+- `./mvnw spotless:apply`: passed and formatted the new test plus `TASKS.md` and `AI_USAGE.md`.
+- `./mvnw spotless:check`: passed.
+- `./mvnw test`: passed with 23 tests, including three correlation filter tests. The existing
+  Spring context test logged the known sandbox-blocked PostgreSQL metadata warning before Maven
+  exited successfully.
+- Escalated `./mvnw spring-boot:run`: passed. PostgreSQL became healthy and the app started on port
+  8080 with context path `/api`.
+- `./scripts/run-hurl-tests.sh`: generated `RUN_ID=20260619131123-26432` and passed all 11 Hurl
+  files and all 21 HTTP requests.
+- Runtime logs showed generated UUIDs for ordinary Hurl requests and preserved
+  `phase4d-correlation-20260619131123-26432` for the explicit correlation flow.
 
 ## Notes For Interview Discussion
 

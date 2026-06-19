@@ -43,12 +43,17 @@ public class EventWatchdogService {
     TraceStateEntity stateEntity =
         traceStateRepository
             .findById(traceId)
-            .orElseThrow(() -> new TraceNotFoundException(traceId));
+            .orElseThrow(
+                () -> {
+                  log.warn("Trace status requested for unknown traceId={}", traceId);
+                  return new TraceNotFoundException(traceId);
+                });
 
     TraceStateSnapshot currentState = toSnapshot(stateEntity);
     TraceStateSnapshot evaluatedState =
         transitionService.evaluateExpiration(currentState, Instant.now(clock));
 
+    // The MVP has no expiration scheduler; status lookup both detects and persists lazy expiry.
     if (evaluatedState.status() != currentState.status()) {
       applySnapshot(stateEntity, evaluatedState, stateEntity.getCreatedAt(), Instant.now(clock));
       traceStateRepository.save(stateEntity);

@@ -34,6 +34,10 @@ URLs under `/api`.
 existing explicit API error handling remains the only documented error-response behavior for this
 phase.
 
+Every HTTP response includes `X-Correlation-Id`. A non-blank request value is preserved; otherwise
+the service generates a UUID. The same value is available to application logs through MDC and does
+not change request or response JSON contracts.
+
 ---
 
 ## Running Hurl Tests

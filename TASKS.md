@@ -312,6 +312,10 @@ Status:
   and adding a script wrapper.
 - Direct CLI, generated-ID script, and explicit-ID script runs each pass all ten Hurl files against
   the same database without cleanup.
+- Phase 4D completed with lightweight correlation IDs, correlation-aware console logs, three
+  focused filter tests, and one independent Hurl correlation flow.
+- Runtime validation passes all 23 tests and all 11 Hurl files without changing business or JSON
+  contracts.
 
 ## Phase 5 — README Polish And Final Verification
 

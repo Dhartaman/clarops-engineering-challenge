@@ -19,6 +19,8 @@ public class TraceStateTransitionService {
       throw new IllegalArgumentException("event traceId must match current traceId");
     }
 
+    // Terminal states reject new events in the MVP; duplicate replay is handled before this domain
+    // transition is invoked.
     return switch (currentState.status()) {
       case STARTED -> acceptNext(currentState, event);
       case WAITING_OTHER_EVENT -> applyWaitingTransition(currentState, event);
@@ -113,6 +115,8 @@ public class TraceStateTransitionService {
     }
 
     if (event.definesNextExpectation()) {
+      // Deadlines follow business event time rather than server receive time, so transport delay
+      // does not shift the agreed TTL window.
       return new TraceStateSnapshot(
           event.traceId(),
           TraceStatus.WAITING_OTHER_EVENT,

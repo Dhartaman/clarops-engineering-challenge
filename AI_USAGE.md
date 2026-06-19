@@ -435,6 +435,57 @@ Assumptions and decisions:
 - A fixed far-future timestamp keeps the waiting scenario deterministic without sleeps, runtime
   clock overrides, or production changes.
 
+### Prompt 4B — Optional Hurl Edge-Case E2E Tests
+
+Summary:
+
+- Codex was asked to add six independent public API Hurl scenarios for duplicate replay,
+  unexpected events, late expected events, completed trace conflicts, expired trace conflicts,
+  and unknown traces.
+- Each stateful scenario creates its own trace with Phase 4B-specific identifiers and uses only
+  HTTP requests and responses.
+- Conflict assertions use the stable RFC 9457-style `status` and `title` fields exposed by the
+  current API error contract rather than volatile detail text.
+
+Files created:
+
+- `hurl/duplicate-event-flow.hurl`.
+- `hurl/unexpected-event-conflict-flow.hurl`.
+- `hurl/late-event-conflict-flow.hurl`.
+- `hurl/completed-trace-conflict-flow.hurl`.
+- `hurl/expired-trace-conflict-flow.hurl`.
+- `hurl/unknown-trace-flow.hurl`.
+
+Files updated:
+
+- `TASKS.md`.
+- `AI_USAGE.md`.
+
+Files deleted:
+
+- None.
+
+Accepted suggestions:
+
+- Test only the public HTTP contract with deterministic, scenario-specific identifiers.
+- Keep every Hurl file independent from execution order.
+- Assert stable error status and title fields without coupling tests to full error messages.
+
+Rejected suggestions:
+
+- Database queries, direct SQL, or assertions about internal persistence state.
+- Production Java changes or new runtime behavior.
+- Docker, dependency, configuration, SQL, or OpenAPI changes.
+- Correlation-id work, which remains postponed.
+- Sleeps or waits for TTL behavior.
+
+Assumptions and decisions:
+
+- The Hurl suite runs against a clean application database because each new event expects `201
+  Created` on its first submission.
+- Far-future event timestamps keep non-expiration scenarios deterministic, while past timestamps
+  exercise late and expired behavior without waiting.
+
 ## Accepted Suggestions
 
 - Keep the existing Java 21 / Spring Boot / PostgreSQL stack.
@@ -649,6 +700,21 @@ Assumptions and decisions:
   app started on port 8080 with context path `/api`.
 - Escalated `hurl --test hurl/*.hurl`: passed all four files and all eight requests with no
   failures. The corrected waiting flow remained `WAITING_OTHER_EVENT`.
+
+### Prompt 4B
+
+- `./mvnw spotless:apply`: passed and formatted `TASKS.md` and `AI_USAGE.md`.
+- `./mvnw spotless:check`: passed.
+- `./mvnw test`: passed with 20 tests. The existing Spring context test logged the known
+  sandbox-blocked PostgreSQL metadata warning before Maven exited successfully.
+- First escalated `./mvnw spring-boot:run`: passed, but detected the PostgreSQL container retained
+  data from prior fixed-ID Hurl validation, so the app was stopped before running Hurl.
+- Escalated `docker compose -f docker/docker-compose.yml down --volumes`: passed and reset only the
+  disposable local validation database volume; no Docker files were changed.
+- Final escalated `./mvnw spring-boot:run`: passed. PostgreSQL initialized a fresh volume and the
+  app started on port 8080 with context path `/api`.
+- Escalated `hurl --test hurl/*.hurl`: passed all ten files and all 20 HTTP requests with no
+  failures.
 
 ## Notes For Interview Discussion
 

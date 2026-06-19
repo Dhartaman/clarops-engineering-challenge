@@ -305,7 +305,8 @@ Status:
 - Runtime validation passes all four scenarios. The waiting fixture uses a deterministic
   far-future deadline so lazy expiration does not change its expected `WAITING_OTHER_EVENT`
   status.
-- Optional edge-case Hurl scenarios remain deferred to a later phase.
+- Phase 4B completed with six optional edge-case scenarios using only the public HTTP API.
+- Runtime validation passes all ten Phase 4 Hurl files and all 20 HTTP requests.
 
 ## Phase 5 — README Polish And Final Verification
 
